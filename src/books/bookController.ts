@@ -148,7 +148,7 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
 
     );
 
-    res.json(updateBook)
+    res.json(updatebook)
 }
 
 const listBooks = async (req: Request, res: Response, next: NextFunction) => {
@@ -176,6 +176,42 @@ const singleBook = async (req: Request, res: Response, next: NextFunction):Promi
    } catch (error) {
     return next(createHttpError(500, "Error while getting the book"))
    }
+};
+
+const deleteBook = async (req: Request, res: Response, next: NextFunction):Promise<void> => {
+    const bookId = req.params.bookId;
+
+    try {
+        const book = await bookModel.findOne({_id: bookId});
+
+        if(!book){
+            return next(createHttpError(404, "No book found"))
+        };
+        const _req = req as Authrequest;
+
+        if(book.author.toString() !== _req.userId){
+            return next(createHttpError(403, "unauthaorized"))
+        };
+
+        const coverFileSplits = book.coverImage.split("/");
+        const coverImagePublicId = coverFileSplits.at(-2) + "/" + (coverFileSplits.at(-1)?.split(".").at(-2))
+
+        const bookFileSplits = book.filelink.split("/");
+        const bookFilePublicId = bookFileSplits.at(-2) + "/" + bookFileSplits.at(-1);
+
+        await cloudinary.uploader.destroy(coverImagePublicId);
+        await cloudinary.uploader.destroy(bookFilePublicId);
+
+        await bookModel.deleteOne({_id: bookId});
+
+        res.sendStatus(204)
+
+
+
+
+    } catch (error) {
+        return next(createHttpError(404, "Error while deleting Book"))
+    }
 }
 
-export {createBook, updateBook, listBooks, singleBook};
+export {createBook, updateBook, listBooks, singleBook, deleteBook};
