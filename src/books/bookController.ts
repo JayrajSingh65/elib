@@ -66,4 +66,101 @@ const createBook = async (req: Request, res: Response, next: NextFunction) => {
 
     
 };
-export default createBook;
+
+const updateBook = async (req: Request, res: Response, next: NextFunction) => {
+    const {title, gener} = req.body;
+    const bookId = req.params.bookId;
+
+    const book = await bookModel.findOne({_id: bookId});
+    const _req = req as Authrequest;
+
+
+    if(!book){
+        return next(createHttpError(404,"Book Not found"))
+    };
+//check acces to the book
+    if(book.author.toString() !== _req.userId){
+        return next(createHttpError(403, "unauthaorized"))
+    };
+    const files = req.files as {[fieldname: string]: Express.Multer.File[]}
+    let completecoverImage = "";
+    if(files.coverImage){
+    const coverImageMinetype =files.coverImage[0].mimetype.split('/').at(-1);
+    const fileName = files.coverImage[0].filename;
+
+    //send files to the cloudnairy
+    const filePath = path.resolve(__dirname, "../../public/data/upload", fileName)
+
+    completecoverImage = fileName;
+
+    const uploadResult = await cloudinary.uploader.upload(filePath, {
+        filename_override: completecoverImage,
+        folder: "book-cover",
+        format: coverImageMinetype,
+
+
+    });
+
+    completecoverImage = uploadResult.secure_url;
+
+    await fs.promises.unlink(filePath);
+
+
+
+    };
+
+    let completefileName = "";
+
+    if(files.filelink){
+        const bookfileName = files.filelink[0].filename;
+    
+        var bookFilePath = path.resolve(__dirname, "../../public/data/upload", bookfileName);
+
+        completefileName = bookfileName;
+
+        const bookFileUploadResult = await cloudinary.uploader.upload(bookFilePath,{
+            resource_type: 'raw',
+            filename_override: "bookfileName",
+            folder: "book-pdfs",
+            format: "pdf"
+        });
+
+        completefileName = bookFileUploadResult.secure_url;
+
+        await fs.promises.unlink(bookFilePath);
+    };
+
+
+    const updatebook = await bookModel.findOneAndUpdate(
+
+        {
+            _id: bookId,
+        },
+
+        {
+            title: title,
+            gener: gener,
+            coverImage: completecoverImage ? completecoverImage : book.coverImage,
+            filelink: completefileName ? completefileName : book.filelink
+        },
+
+        {new: true}
+
+    );
+
+    res.json(updateBook)
+}
+
+const listBooks = async (req: Request, res: Response, next: NextFunction) => {
+    
+    try {
+        const book = await bookModel.find();
+
+        res.json(book)
+        
+    } catch (error) {
+        return next(createHttpError(500, "Error while getting Books"))
+    }
+}
+
+export {createBook, updateBook, listBooks};
