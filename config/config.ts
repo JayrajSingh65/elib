@@ -9,7 +9,8 @@ const _conf = {
     jwtSecret: process.env.JWT_SECRET,
     cloud_name: process.env.CLOUDINARY_CLOUD,
     cloud_api: process.env.CLOUDINARY_API,
-    cloud_secret: process.env.CLOUDINARY_SECRET
+    cloud_secret: process.env.CLOUDINARY_SECRET,
+    frontendDomain: process.env.FRONTEND_DOMAIN
 
 
 };
